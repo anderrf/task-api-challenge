@@ -38,9 +38,9 @@ export class Task{
 
     updateTask(updatedData){
         let currentDate = new Date();
-        this.title = updatedData.title ?? '';
-        this.description = updatedData.description ?? '';
-        this.completed_at = updatedData.completed_at ?? null;
+        this.title = updatedData.title ? updatedData.title : this.title ?? '';
+        this.description = updatedData.description ? updatedData.description : this.description ?? '';
+        this.completed_at = updatedData.completed_at ? updatedData.completed_at : this.completed_at ?? null;
         this.updated_at = currentDate;
     }
 }

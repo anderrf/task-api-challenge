@@ -1,8 +1,9 @@
 import { buildRoutePath } from './utils/build-route-path.js';
 import { randomUUID } from 'node:crypto';
 import { Task } from './models/task.js';
+import { Database } from './database.js';
 
-const allTasks = [];
+const database = new Database();
 
 export const routes = [
     {
@@ -10,7 +11,7 @@ export const routes = [
         path: buildRoutePath('/tasks'),
         handler: (request, response) => {
             let task = Task.createTaskFromData(request.body);
-            allTasks.push(task);
+            database.insert('tasks', task);
             return response
                 .setHeader('Content-type', 'application/json')
                 .writeHead(201)
@@ -21,10 +22,15 @@ export const routes = [
         method: 'GET',
         path: buildRoutePath('/tasks'),
         handler: (request, response) => {
+            const {search} = request.query;
+            const tasks = database.select(
+                'tasks',
+                (search ? {title: search, description: search} : undefined)
+            );
             return response
                 .setHeader('Content-type', 'application/json')
                 .writeHead(200)
-                .end(JSON.stringify([...allTasks]));
+                .end(JSON.stringify([...tasks]));
         }
     },
     {
@@ -32,22 +38,21 @@ export const routes = [
         path: buildRoutePath('/tasks/:id'),
         handler: (request, response) => {
             const {id} = request.params;
-            let rowIndex = allTasks.findIndex(task => {
-                return task.id === id;
-            });
-            if(rowIndex > -1){
-                let taskToUpdate = Task.createTaskFromData(allTasks[rowIndex]);
-                taskToUpdate.updateTask(request.body);
-                allTasks[rowIndex] = taskToUpdate;
+            let taskFromBody = request.body;
+            let taskFromDatabase = database.select('tasks', {id})?.[0];
+            if(!taskFromDatabase){
                 return response
                     .setHeader('Content-type', 'application/json')
-                    .writeHead(200)
-                    .end(JSON.stringify(taskToUpdate));
+                    .writeHead(404)
+                    .end("Task not found!");
             }
+            let taskToUpdate = Task.createTaskFromData(taskFromDatabase);
+            taskToUpdate.updateTask(taskFromBody);
+            database.update('tasks', id, taskToUpdate);
             return response
                 .setHeader('Content-type', 'application/json')
-                .writeHead(404)
-                .end("Task not found!");
+                .writeHead(200)
+                .end(JSON.stringify(taskToUpdate));
         }
     },
     {
@@ -55,20 +60,18 @@ export const routes = [
         path: buildRoutePath('/tasks/:id'),
         handler: (request, response) => {
             const {id} = request.params;
-            let rowIndex = allTasks.findIndex(task => {
-                return task.id === id;
-            });
-            if(rowIndex > -1){
-                let deletedTask = allTasks.splice(rowIndex, 1);
+            let taskToBeDeleted = database.select('tasks', {id})?.[0];
+            if(!taskToBeDeleted){
                 return response
                     .setHeader('Content-type', 'application/json')
-                    .writeHead(204)
-                    .end(JSON.stringify(deletedTask));
+                    .writeHead(404)
+                    .end("Task not found!");
             }
+            database.delete('tasks', id);
             return response
                 .setHeader('Content-type', 'application/json')
-                .writeHead(404)
-                .end("Task not found!");
+                .writeHead(204)
+                .end(JSON.stringify(taskToBeDeleted));
         }
     },
     {
@@ -76,22 +79,20 @@ export const routes = [
         path: buildRoutePath('/tasks/:id/complete'),
         handler: (request, response) => {
             const {id} = request.params;
-            let rowIndex = allTasks.findIndex(task => {
-                return task.id === id;
-            });
-            if(rowIndex > -1){
-                let completedTask = Task.createTaskFromData(allTasks[rowIndex]);
-                completedTask.markAsCompleted();
-                allTasks[rowIndex] = completedTask;
+            let taskFromDatabase = database.select('tasks', {id})?.[0];
+            if(!taskFromDatabase){
                 return response
                     .setHeader('Content-type', 'application/json')
-                    .writeHead(200)
-                    .end(JSON.stringify(completedTask));
+                    .writeHead(404)
+                    .end("Task not found!");
             }
+            let taskToComplete = Task.createTaskFromData(taskFromDatabase);
+            taskToComplete.markAsCompleted();
+            database.update('tasks', id, taskToComplete);
             return response
                 .setHeader('Content-type', 'application/json')
-                .writeHead(404)
-                .end("Task not found!");
+                .writeHead(200)
+                .end(JSON.stringify(taskToComplete));
         }
     }
 ];
