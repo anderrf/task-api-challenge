@@ -1,7 +1,7 @@
 import { buildRoutePath } from './utils/build-route-path.js';
-import { randomUUID } from 'node:crypto';
 import { Task } from './models/task.js';
 import { Database } from './database.js';
+import { ErrorMessages } from './consts/error-messages.js';
 
 const database = new Database();
 
@@ -10,12 +10,19 @@ export const routes = [
         method: 'POST',
         path: buildRoutePath('/tasks'),
         handler: (request, response) => {
-            let task = Task.createTaskFromData(request.body);
-            database.insert('tasks', task);
+            let taskFromBody = request.body;
+            if(!Task.checkIfTitleAndDescriptionAreValid(taskFromBody)){
+                return response
+                    .setHeader('Content-type', 'text/plain')
+                    .writeHead(400)
+                    .end(ErrorMessages.TITLE_AND_DESCRIPTION_NOT_VALID);
+            }
+            let taskToCreate = Task.createTaskFromData(taskFromBody);
+            database.insert('tasks', taskToCreate);
             return response
                 .setHeader('Content-type', 'application/json')
                 .writeHead(201)
-                .end(JSON.stringify(task));
+                .end(JSON.stringify(taskToCreate));
         }
     },
     {
@@ -37,14 +44,20 @@ export const routes = [
         method: 'PUT',
         path: buildRoutePath('/tasks/:id'),
         handler: (request, response) => {
-            const {id} = request.params;
             let taskFromBody = request.body;
+            if(!Task.checkIfTitleAndDescriptionAreValid(taskFromBody)){
+                return response
+                    .setHeader('Content-type', 'text/plain')
+                    .writeHead(400)
+                    .end(ErrorMessages.TITLE_AND_DESCRIPTION_NOT_VALID);
+            }
+            const {id} = request.params;
             let taskFromDatabase = database.select('tasks', {id})?.[0];
             if(!taskFromDatabase){
                 return response
-                    .setHeader('Content-type', 'application/json')
+                    .setHeader('Content-type', 'text/plain')
                     .writeHead(404)
-                    .end("Task not found!");
+                    .end(ErrorMessages.TASK_NOT_FOUND);
             }
             let taskToUpdate = Task.createTaskFromData(taskFromDatabase);
             taskToUpdate.updateTask(taskFromBody);
@@ -63,9 +76,9 @@ export const routes = [
             let taskToBeDeleted = database.select('tasks', {id})?.[0];
             if(!taskToBeDeleted){
                 return response
-                    .setHeader('Content-type', 'application/json')
+                    .setHeader('Content-type', 'text/plain')
                     .writeHead(404)
-                    .end("Task not found!");
+                    .end(ErrorMessages.TASK_NOT_FOUND);
             }
             database.delete('tasks', id);
             return response
@@ -82,9 +95,9 @@ export const routes = [
             let taskFromDatabase = database.select('tasks', {id})?.[0];
             if(!taskFromDatabase){
                 return response
-                    .setHeader('Content-type', 'application/json')
+                    .setHeader('Content-type', 'text/plain')
                     .writeHead(404)
-                    .end("Task not found!");
+                    .end(ErrorMessages.TASK_NOT_FOUND);
             }
             let taskToComplete = Task.createTaskFromData(taskFromDatabase);
             taskToComplete.markAsCompleted();

@@ -43,4 +43,11 @@ export class Task{
         this.completed_at = updatedData.completed_at ? updatedData.completed_at : this.completed_at ?? null;
         this.updated_at = currentDate;
     }
+
+    static checkIfTitleAndDescriptionAreValid(task){
+        if(typeof(task?.title) !== 'string' && typeof(task?.description) !== 'string'){
+            return false;
+        }
+        return !!task?.title?.length && !!task?.description?.length
+    }
 }
