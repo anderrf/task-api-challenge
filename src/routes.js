@@ -12,11 +12,22 @@ export const routes = [
         path: buildRoutePath('/tasks'),
         handler: (request, response) => {
             let taskFromBody = request.body;
-            if(!Task.checkIfTitleAndDescriptionAreValid(taskFromBody)){
+            if(!taskFromBody){
                 return response
-                    .setHeader('Content-type', 'text/plain')
+                    .setHeader('Content-type', 'application/json')
                     .writeHead(400)
-                    .end(ErrorMessages.TITLE_AND_DESCRIPTION_NOT_VALID);
+                    .end(JSON.stringify({
+                        "error": [ErrorMessages.TITLE_AND_DESCRIPTION_NOT_VALID]
+                    }));
+            }
+            let modelErrors = Task.checkErrorsForTitleAndDescriptionFields(taskFromBody);
+            if(modelErrors.length){
+                return response
+                    .setHeader('Content-type', 'application/json')
+                    .writeHead(400)
+                    .end(JSON.stringify({
+                        "error": modelErrors
+                    }));
             }
             let taskToCreate = Task.createTaskFromData(taskFromBody);
             database.insert('tasks', taskToCreate);
@@ -46,19 +57,32 @@ export const routes = [
         path: buildRoutePath('/tasks/:id'),
         handler: (request, response) => {
             let taskFromBody = request.body;
-            if(!Task.checkIfTitleAndDescriptionAreValid(taskFromBody)){
+            if(!taskFromBody){
                 return response
-                    .setHeader('Content-type', 'text/plain')
+                    .setHeader('Content-type', 'application/json')
                     .writeHead(400)
-                    .end(ErrorMessages.TITLE_AND_DESCRIPTION_NOT_VALID);
+                    .end(JSON.stringify({
+                        "error": [ErrorMessages.TITLE_AND_DESCRIPTION_NOT_VALID]
+                    }));
+            }
+            let modelErrors = Task.checkErrorsForTitleAndDescriptionFields(taskFromBody);
+            if(modelErrors.length){
+                return response
+                    .setHeader('Content-type', 'application/json')
+                    .writeHead(400)
+                    .end(JSON.stringify({
+                        "error": modelErrors
+                    }));
             }
             const {id} = request.params;
             let taskFromDatabase = database.select('tasks', {id})?.[0];
             if(!taskFromDatabase){
                 return response
-                    .setHeader('Content-type', 'text/plain')
+                    .setHeader('Content-type', 'application/json')
                     .writeHead(404)
-                    .end(ErrorMessages.TASK_NOT_FOUND);
+                    .end(JSON.stringify({
+                        "error": [ErrorMessages.TASK_NOT_FOUND]
+                    }));
             }
             let taskToUpdate = Task.createTaskFromData(taskFromDatabase);
             taskToUpdate.updateTask(taskFromBody);
@@ -77,9 +101,11 @@ export const routes = [
             let taskToBeDeleted = database.select('tasks', {id})?.[0];
             if(!taskToBeDeleted){
                 return response
-                    .setHeader('Content-type', 'text/plain')
+                    .setHeader('Content-type', 'application/json')
                     .writeHead(404)
-                    .end(ErrorMessages.TASK_NOT_FOUND);
+                    .end(JSON.stringify({
+                        "error": [ErrorMessages.TASK_NOT_FOUND]
+                    }));
             }
             database.delete('tasks', id);
             return response
@@ -96,9 +122,11 @@ export const routes = [
             let taskFromDatabase = database.select('tasks', {id})?.[0];
             if(!taskFromDatabase){
                 return response
-                    .setHeader('Content-type', 'text/plain')
+                    .setHeader('Content-type', 'application/json')
                     .writeHead(404)
-                    .end(ErrorMessages.TASK_NOT_FOUND);
+                    .end(JSON.stringify({
+                        "error": [ErrorMessages.TASK_NOT_FOUND]
+                    }));
             }
             let taskToComplete = Task.createTaskFromData(taskFromDatabase);
             taskToComplete.markAsCompleted();
@@ -145,7 +173,9 @@ export const routes = [
                                             return response
                                                 .setHeader('Content-type', 'application/json')
                                                 .writeHead(400)
-                                                .end(JSON.stringify(bodies));
+                                                .end(JSON.stringify({
+                                                    "error": JSON.stringify(bodies)
+                                                }));
                                         }
                                         else{
                                             return response
@@ -158,14 +188,18 @@ export const routes = [
                                         return response
                                             .setHeader('Content-type', 'application/json')
                                             .writeHead(400)
-                                            .end(JSON.stringify(error));
+                                            .end(JSON.stringify({
+                                                "error": error
+                                            }));
                                     });
                             }
                             else{
                                 return response
                                     .setHeader('Content-type', 'application/json')
                                     .writeHead(400)
-                                    .end(errors);
+                                    .end(JSON.stringify(
+                                        {"error": errors}
+                                    ));
                             }
                         });
                 })
@@ -173,7 +207,9 @@ export const routes = [
                     return response
                                 .setHeader('Content-type', 'application/json')
                                 .writeHead(400)
-                                .end(err);
+                                .end(JSON.stringify({
+                                    "error": err
+                                }));
                 });
         }
     }

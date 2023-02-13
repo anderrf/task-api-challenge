@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { ErrorMessages } from '../consts/error-messages.js';
 
 export class Task{
     id;
@@ -49,5 +50,16 @@ export class Task{
             return false;
         }
         return !!task?.title?.length && !!task?.description?.length
+    }
+
+    static checkErrorsForTitleAndDescriptionFields(task){
+        let errors = [];
+        if(typeof(task?.title) !== 'string' || !task?.title?.length){
+            errors.push(ErrorMessages.TITLE_NOT_VALID);
+        }
+        if(typeof(task?.description) !== 'string' || !task?.description?.length){
+            errors.push(ErrorMessages.DESCRIPTION_NOT_VALID);
+        }
+        return errors;
     }
 }
