@@ -2,6 +2,7 @@ import { buildRoutePath } from './utils/build-route-path.js';
 import { Task } from './models/task.js';
 import { Database } from './database.js';
 import { ErrorMessages } from './consts/error-messages.js';
+import { importCsvFromFakeFile, saveImportedTasks } from './utils/convert-csv.js';
 
 const database = new Database();
 
@@ -106,6 +107,74 @@ export const routes = [
                 .setHeader('Content-type', 'application/json')
                 .writeHead(200)
                 .end(JSON.stringify(taskToComplete));
+        }
+    },
+    {
+        method: 'POST',
+        path: buildRoutePath('/tasks/test-csv'),
+        handler: async(request, response) => {
+            let tasks = [];
+            let errors = [];
+            return await importCsvFromFakeFile()
+                .then(parser => {
+                    parser
+                        .on('data', (data) => {
+                            let [title, description] = data;
+                            tasks.push({title, description});
+                        })
+                        .on('error', (err) => {
+                            errors.push(err.message);
+                        })
+                        .on('end', () => {
+                            if(!errors.length){
+                                if(!tasks.length){
+                                    return response
+                                        .setHeader('Content-type', 'application/json')
+                                        .writeHead(204)
+                                        .end(JSON.stringify([]));
+                                }
+                                let taskPromises = saveImportedTasks(tasks);
+                                Promise.all(taskPromises)
+                                    .then(async(data) => {
+                                        let bodies = [];
+                                        for await(const res of data){
+                                            let body = await (res.body.getReader().read().then(data => Buffer.from(data.value).toLocaleString()));
+                                            bodies.push(JSON.parse(body));
+                                        }
+                                        if(data.some(res => res.status >= 400)){
+                                            return response
+                                                .setHeader('Content-type', 'application/json')
+                                                .writeHead(400)
+                                                .end(JSON.stringify(bodies));
+                                        }
+                                        else{
+                                            return response
+                                                .setHeader('Content-type', 'application/json')
+                                                .writeHead(201)
+                                                .end(JSON.stringify(bodies));
+                                        }
+                                    })
+                                    .catch(error => {
+                                        return response
+                                            .setHeader('Content-type', 'application/json')
+                                            .writeHead(400)
+                                            .end(JSON.stringify(error));
+                                    });
+                            }
+                            else{
+                                return response
+                                    .setHeader('Content-type', 'application/json')
+                                    .writeHead(400)
+                                    .end(errors);
+                            }
+                        });
+                })
+                .catch(err => {
+                    return response
+                                .setHeader('Content-type', 'application/json')
+                                .writeHead(400)
+                                .end(err);
+                });
         }
     }
 ];
