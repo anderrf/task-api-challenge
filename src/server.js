@@ -5,7 +5,7 @@ import { extractQueryParams } from './utils/extract-query-params.js'
 
 const server = http.createServer(
     async(request, response) => {
-        if(request.headers['content-type'] === 'application/json'){
+        if(request.headers['content-type']?.includes('application/json')){
             await json(request, response);
         }
         const {method, url} = request;

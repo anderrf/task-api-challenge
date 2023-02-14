@@ -53,6 +53,29 @@ export const routes = [
         }
     },
     {
+        method: 'GET',
+        path: buildRoutePath('/tasks/:id'),
+        handler: (request, response) => {
+            const {id} = request.params;
+            const task = database.select(
+                'tasks',
+                {id}
+            )?.[0];
+            if(!task){
+                return response
+                    .setHeader('Content-type', 'application/json')
+                    .writeHead(404)
+                    .end(JSON.stringify({
+                        "error": [ErrorMessages.TASK_NOT_FOUND]
+                    }));
+            }
+            return response
+                .setHeader('Content-type', 'application/json')
+                .writeHead(200)
+                .end(JSON.stringify(task));
+        }
+    },
+    {
         method: 'PUT',
         path: buildRoutePath('/tasks/:id'),
         handler: (request, response) => {
