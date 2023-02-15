@@ -21,7 +21,7 @@ export class Database{
                 row => {
                     return Object.entries(search).some(
                         ([key, value]) => {
-                            return value ? row[key].includes(value) : true;
+                            return value ? row[key]?.toString()?.toLowerCase()?.includes(value?.toString()?.toLowerCase()) : true;
                         }
                     );
                 }

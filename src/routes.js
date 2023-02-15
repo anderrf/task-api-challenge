@@ -2,7 +2,7 @@ import { buildRoutePath } from './utils/build-route-path.js';
 import { Task } from './models/task.js';
 import { Database } from './database.js';
 import { ErrorMessages } from './consts/error-messages.js';
-import { importCsvFromFakeFile, saveImportedTasks } from './utils/convert-csv.js';
+import { downloadFromStoredData, importCsvFromFakeFile, saveImportedTasks } from './utils/convert-csv.js';
 
 const database = new Database();
 
@@ -228,12 +228,51 @@ export const routes = [
                 })
                 .catch(err => {
                     return response
-                                .setHeader('Content-type', 'application/json')
-                                .writeHead(400)
-                                .end(JSON.stringify({
-                                    "error": err
-                                }));
+                        .setHeader('Content-type', 'application/json')
+                        .writeHead(400)
+                        .end(JSON.stringify({
+                            "error": err
+                        }));
                 });
+        }
+    },
+    {
+        method: 'GET',
+        path: buildRoutePath('/tasks/csv/download'),
+        handler: async(request, response) => {
+            const {search} = request.query;
+            const tasks = database.select(
+                'tasks',
+                (search ? {title: search, description: search} : undefined)
+            );
+            if(!tasks?.length){
+                return response
+                    .setHeader('Content-type', 'application/json')
+                    .writeHead(404)
+                    .end(JSON.stringify([]));
+            }
+            try{
+                downloadFromStoredData(tasks)
+                    .on('error', (err) => {
+                        return response
+                            .setHeader('Content-type', 'application/json')
+                            .writeHead(404)
+                            .end(JSON.stringify(err));
+                    })
+                    .on('data', (record) => {
+                        return response
+                            .setHeader('Content-type', 'text/csv')
+                            .setHeader('Content-disposition', 'attachment; filename="tasks.csv"')
+                            .writeHead(200)
+                            .end(record);
+                    });
+            }
+            catch(err){
+                return response
+                    .setHeader('Content-type', 'application/json')
+                    .writeHead(404)
+                    .end(JSON.stringify(err));
+            }
         }
     }
 ];

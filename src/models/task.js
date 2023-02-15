@@ -23,7 +23,7 @@ export class Task{
             this.id = randomUUID();
             this.created_at = currentDate;
             this.completed_at = null;
-            this.updateTask = currentDate;
+            this.updated_at = currentDate;
         }
     }
 
